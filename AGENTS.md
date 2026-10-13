@@ -28,6 +28,8 @@ docker compose config --hash='*'
 docker inspect terminalku --format '{{index .Config.Labels "com.docker.compose.config-hash"}}'
 # 3. berkas yang benar-benar di-serve
 curl -s http://100.97.161.68:8364/app.js | md5sum   # banding md5sum public/app.js
+# 4. kepemilikan berkas (jangan ada sisa root-owned dari `docker run` tanpa --user)
+find ~/terminal/terminalku -not -user "$(id -u)" -not -path '*/.git/*'
 ```
 
 Temuan 2026-10-13: tidak ada drift, tetapi ditemukan **env mati**:
@@ -38,6 +40,12 @@ Temuan 2026-10-13: tidak ada drift, tetapi ditemukan **env mati**:
 | `SESSION_SECRET` | **Mati-desain**: token sesi = `crypto.randomBytes(32)` acak disimpan di tabel sesi SQLite (opaque token), tidak ada yang ditandatangani. Aman, tapi jangan dianggap pengaman. |
 
 Dijaga test `test/config-usage.test.mjs` (`KNOWN_DEAD` + alasan). Bila salah satu kunci itu mulai dipakai, test gagal dan README wajib diperbarui.
+
+**Temuan lain (2026-10-13):**
+
+- `./data/` (root repo) **milik `root:root`**, kosong, dan **tidak dipakai** — compose memetakan `./data2` → `/app/data`. Sisa dari dulu; butuh `sudo` untuk hapus. Jangan bingungkan dengan `data2/` yang aktif.
+- Container berjalan sebagai **uid 0 (root)**, tapi `PUID=1001`/`PGID=1001` di `.env` membuat berkas `data2/*.db*` tetap milik `1001:1001`. Tidak ada sisa berkas root-owned di repo.
+- Perubahan `public/` **wajib rebuild** (`docker compose up -d --build`), bukan `restart`.
 
 ## Gaya Kerja (Hemat Token)
 
