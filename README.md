@@ -42,12 +42,13 @@ Isi nilai wajib (jangan pakai default contoh):
 
 | Variabel | Isi |
 |---|---|
-| `SESSION_SECRET` | String acak panjang, unik per host. Buat: `openssl rand -hex 32` |
 | `ADMIN_PASSWORD` | Password admin (dipakai saat seed DB pertama kali) |
 | `FS_ROOT` | Root file yang boleh dijelajahi web, mis. `/host/home` |
 | `DB_PATH` | Default `./data/terminalku.db` (di dalam container) |
-| `TERM_USER` | User host yang dipakai shell terminal |
-| `TERM_CWD` | Direktori awal shell terminal |
+
+> **`SESSION_SECRET` TIDAK DIPAKAI.** Token sesi dibuat dari `crypto.randomBytes(32)` acak dan disimpan di tabel sesi SQLite (opaque token) — tidak ada nilai yang ditandatangani, jadi mengubah `SESSION_SECRET` tidak berpengaruh apa pun. Aman untuk dibiarkan, tapi jangan diandalkan sebagai pengaman.
+>
+> **`TERM_USER` / `TERM_CWD` / `TERM_SHELL` TIDAK DIPAKAI** — masih dideklarasikan di `server/config.js` tapi tidak dibaca `routes-terminal.js` (user & direktori shell ter-hardcode). Ganti user terminal lewat langkah 4.
 
 Nilai lain yang biasanya perlu disesuaikan:
 
@@ -146,7 +147,8 @@ TERMINALKU_URL=http://<host>:<port> node --test test/   # server lain
 
 ### 8. Keamanan (wajib sebelum dipakai publik)
 
-- Ganti `SESSION_SECRET` dan `ADMIN_PASSWORD` dari nilai contoh.
+- Ganti `ADMIN_PASSWORD` dari nilai contoh.
+- Catatan: `SESSION_SECRET` **tidak dipakai** (token sesi acak di DB) — tidak perlu diisi.
 - Bind port hanya ke IP Tailscale, bukan `0.0.0.0`.
 - `.env`, `data/`, `data2/`, dan `node_modules/` **tidak boleh** ikut ter-commit (sudah ada di `.gitignore`).
 - Audit semua aksi admin tersimpan di DB (login, buka/tutup terminal).
