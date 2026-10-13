@@ -5,7 +5,9 @@ Workspace pribadi di `/home/adminsipuruh/terminal`. Folder ini untuk file kerja 
 ## Batas Kerja (WAJIB)
 
 1. **Tulis/ubah/hapus file HANYA di dalam `~/terminal/`.** Membaca di luar folder (repo `~/new_sipuruh`, docs, sistem) untuk konteks diperbolehkan; menulis/mengubah/menghapus di luar **dilarang** tanpa izin eksplisit user.
-2. **Jangan** init git / commit / push dari folder ini; jangan sentuh repo lain.
+2. Folder ini **sudah repo git** (sejak 2026-10-13), remote `origin` = `https://github.com/bidperumahanskh-ops/terminal` (branch `main`). Commit/push **hanya atas perintah eksplisit user**; jangan sentuh repo lain.
+   - **JANGAN pernah commit/push kredensial**: `terminalku/.env`, `terminalku/data2/*.db*` (hash admin + audit log). Dijaga `.gitignore` root + `terminalku/.gitignore`. Audit staged sebelum commit: `git diff --cached | grep -nE '\$2[aby]\$|PRIVATE KEY|ghp_|github_pat_|AKIA'`.
+   - Identitas git repo ini: `adminsipuruh <adminsipuruh@sipuruh.sukoharjokab.go.id>` (samakan dengan repo lain).
 3. **Jangan** baca/tampilkan `.env` atau kredensial apa pun; jangan jalankan perintah yang mengubah sistem/produksi tanpa persetujuan.
 4. Perintah read-only (ls, df, jalankan script di folder ini) aman tanpa izin.
 
