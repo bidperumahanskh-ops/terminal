@@ -41,9 +41,13 @@ test('.env.example WAJIB tetap bisa di-commit', () => {
 
 test('jejak versi compose lama (.bak) sengaja dilacak', () => {
   const bak = 'terminalku/docker-compose.yml.bak-20261008-130906';
-  // Negasi (!) membuat berkas ini lolos; check-ignore mengembalikan baris negasi.
-  const out = git('check-ignore', '-v', bak);
-  assert.match(out, /^!|:!/, `negasi tidak berlaku untuk ${bak}`);
+  // Harus TIDAK ter-ignore. Catatan: `git check-ignore` tidak melaporkan berkas
+  // yang sudah ter-track, jadi cukup pastikan tidak ada pola yang menangkapnya.
+  assert.equal(git('check-ignore', bak).trim(), '',
+    `${bak} seharusnya tidak ter-ignore`);
+  // Dan berkas itu harus benar-benar ada di HEAD (ter-commit).
+  assert.match(git('ls-files', '--error-unmatch', bak), /\.bak-/,
+    `${bak} belum ter-track di git`);
 });
 
 test('tidak ada berkas sensitif yang ter-track di git', () => {
