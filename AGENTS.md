@@ -14,6 +14,31 @@ Workspace pribadi di `/home/adminsipuruh/terminal`. Folder ini untuk file kerja 
 3. **Jangan** baca/tampilkan `.env` atau kredensial apa pun; jangan jalankan perintah yang mengubah sistem/produksi tanpa persetujuan.
 4. Perintah read-only (ls, df, jalankan script di folder ini) aman tanpa izin.
 
+## Verifikasi Deploy vs Host (WAJIB sebelum bilang "sudah ter-deploy")
+
+Jangan asumsikan `docker compose up -d --build` memuat semua perubahan. Buktikan:
+
+```bash
+cd ~/terminal/terminalku
+# 1. berkas yang di-COPY ke image, host vs container (harus sama)
+find server public -type f -exec md5sum {} \; | sort -k2 | md5sum
+docker exec terminalku sh -c 'cd /app && find server public -type f -exec md5sum {} \; | sort -k2 | md5sum'
+# 2. config compose
+docker compose config --hash='*'
+docker inspect terminalku --format '{{index .Config.Labels "com.docker.compose.config-hash"}}'
+# 3. berkas yang benar-benar di-serve
+curl -s http://100.97.161.68:8364/app.js | md5sum   # banding md5sum public/app.js
+```
+
+Temuan 2026-10-13: tidak ada drift, tetapi ditemukan **env mati**:
+
+| Env | Status |
+|---|---|
+| `TERM_SHELL`, `TERM_USER`, `TERM_CWD` | Dideklarasikan di `server/config.js` tapi **tak pernah dibaca** `routes-terminal.js` (user & dir home ter-hardcode). Mengubahnya di `.env` tidak berefek. |
+| `SESSION_SECRET` | **Mati-desain**: token sesi = `crypto.randomBytes(32)` acak disimpan di tabel sesi SQLite (opaque token), tidak ada yang ditandatangani. Aman, tapi jangan dianggap pengaman. |
+
+Dijaga test `test/config-usage.test.mjs` (`KNOWN_DEAD` + alasan). Bila salah satu kunci itu mulai dipakai, test gagal dan README wajib diperbarui.
+
 ## Gaya Kerja (Hemat Token)
 
 - Jawaban singkat, teknis, Bahasa Indonesia; angka/nilai langsung tanpa prosa berlebih.
