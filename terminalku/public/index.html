@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminalku</title>
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
+  <link rel="stylesheet" href="/vendor/codemirror/lib/codemirror.css">
+  <link rel="stylesheet" href="/vendor/codemirror/theme/dracula.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Login -->
+  <div id="login-view" class="hidden">
+    <form id="login-form" class="login-card">
+      <h1>Terminalku</h1>
+      <p class="muted">Web File Manager + Terminal VPS</p>
+      <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required>
+      <p id="login-error" class="error hidden"></p>
+      <button type="submit">Masuk</button>
+    </form>
+  </div>
+
+  <!-- App utama -->
+  <div id="app-view" class="hidden">
+    <header>
+      <span class="brand">Terminalku</span>
+      <span id="user-info" class="muted"></span>
+      <button id="btn-logout">Keluar</button>
+    </header>
+
+    <main>
+      <!-- Panel kiri: file explorer -->
+      <section id="explorer">
+        <div class="panel-head">
+          <span id="current-path">/</span>
+          <button id="btn-up" title="Naik folder">⬆</button>
+          <button id="btn-refresh" title="Muat ulang">⟳</button>
+          <button id="btn-new" title="Buat file/folder">＋</button>
+          <button id="btn-upload" title="Upload file">⇪</button>
+        </div>
+        <div id="file-list" class="file-list"></div>
+      </section>
+
+      <!-- Penggeser lebar panel: explorer <-> editor -->
+      <div id="split-v" class="splitter splitter-v" role="separator" aria-orientation="vertical"
+           title="Geser untuk atur lebar panel (klik 2x = default)"></div>
+
+      <!-- Panel kanan: editor -->
+      <section id="editor-panel">
+        <div id="tabs" class="tabs hidden"></div>
+        <div class="panel-head">
+          <span id="editor-title" class="muted">Pilih file untuk melihat isinya</span>
+          <span id="editor-actions" class="hidden">
+            <button id="btn-save" title="Simpan (Ctrl+S)">💾 Simpan</button>
+            <button id="btn-download" title="Download file">⬇</button>
+          </span>
+          <select id="view-mode" class="hidden" title="Format tampilan (Text Editor / Markdown Preview / Markdown Editor)">
+            <option value="text">📝 Text Editor</option>
+            <option value="md-preview">👁 Markdown Preview</option>
+            <option value="md-editor">✏️ Markdown Editor</option>
+          </select>
+        </div>
+        <textarea id="editor"></textarea>
+        <div id="md-preview" class="md-preview hidden"></div>
+      </section>
+    </main>
+
+    <!-- Penggeser tinggi panel terminal -->
+    <div id="split-h" class="splitter splitter-h" role="separator" aria-orientation="horizontal"
+         title="Geser untuk atur tinggi terminal (klik 2x = default)"></div>
+
+    <!-- Panel bawah: terminal -->
+    <section id="terminal-panel">
+      <div class="panel-head">
+        <span>Terminal</span>
+        <button id="btn-term-copy" title="Salin semua teks terminal / seleksi">📋 Salin</button>
+        <button id="btn-term-paste" title="Tempel / Paste teks">📥 Paste</button>
+        <button id="btn-term-expand" title="Fullscreen / satu layar penuh">⛶</button>
+        <button id="btn-term-size" title="Perbesar/perkecil terminal">⇕</button>
+        <button id="btn-term-reset" title="Reset terminal">↺</button>
+      </div>
+      <div id="terminal"></div>
+    </section>
+  </div>
+
+  <input type="file" id="file-upload-input" class="hidden">
+
+  <!-- Menu klik kanan explorer -->
+  <div id="ctx-menu" class="ctx-menu hidden" role="menu"></div>
+
+  <!-- Modal input & view (pengganti prompt/confirm/selection viewer) -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="modal-title"></h3>
+      <input id="modal-input" type="text" class="hidden">
+      <textarea id="modal-textarea" class="hidden" rows="10" placeholder="Teks terminal..."></textarea>
+      <p id="modal-message" class="muted hidden"></p>
+      <div class="modal-btns">
+        <button id="modal-ok" class="btn-ok">OK</button>
+        <button id="modal-cancel" class="btn-cancel">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/codemirror/lib/codemirror.js"></script>
+  <script src="/vendor/codemirror/mode/javascript/javascript.js"></script>
+  <script src="/vendor/codemirror/mode/python/python.js"></script>
+  <script src="/vendor/codemirror/mode/shell/shell.js"></script>
+  <script src="/vendor/codemirror/mode/xml/xml.js"></script>
+  <script src="/vendor/codemirror/mode/css/css.js"></script>
+  <script src="/vendor/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+  <script src="/vendor/codemirror/mode/php/php.js"></script>
+  <script src="/vendor/codemirror/mode/clike/clike.js"></script>
+  <script src="/vendor/codemirror/mode/sql/sql.js"></script>
+  <script src="/vendor/codemirror/mode/markdown/markdown.js"></script>
+  <script src="/vendor/codemirror/mode/yaml/yaml.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

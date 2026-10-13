@@ -1,0 +1,22 @@
+# Rahasia & data runtime — JANGAN pernah di-commit
+.env
+.env.*
+!.env.example
+data/
+data2/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Dependensi & artefak
+node_modules/
+*.log
+*.bak-*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~

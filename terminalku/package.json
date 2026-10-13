@@ -1,0 +1,24 @@
+{
+  "name": "terminalku",
+  "version": "0.1.0",
+  "description": "Terminalku — Web File Manager + Terminal VPS (Fastify + SQLite + xterm.js)",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/static": "^8.2.0",
+    "@fastify/websocket": "^11.1.0",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.2.0",
+    "fastify": "^5.4.0",
+    "node-pty": "^1.0.0"
+  }
+}

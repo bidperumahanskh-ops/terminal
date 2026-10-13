@@ -1,0 +1,26 @@
+# Terminalku — compose lokal (port 8364)
+services:
+  terminalku:
+    build: .
+    container_name: terminalku
+    restart: unless-stopped
+    # Akses namespace host & docker socket agar terminal langsung mengendalikan host VPS
+    pid: host
+    privileged: true
+    ports:
+      # Bind ke IP Tailscale saja — tidak terekspos internet publik
+      - "100.97.161.68:8364:3000"
+    env_file: .env
+    environment:
+      # Container selalu listen di 3000 (host port 8364 → container 3000)
+      PORT: "3000"
+    volumes:
+      # Akses root host & docker socket
+      - /:/host:rw
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Akses file VPS — home rw
+      - /home/adminsipuruh:/home/adminsipuruh
+      - /home/adminsipuruh:/host/home
+      - /etc:/host/etc:ro
+      - /var/log:/host/var/log:ro
+      - ./data2:/app/data
