@@ -1,0 +1,26 @@
+# Terminalku — compose lokal (port 8364)
+services:
+  terminalku:
+    build: .
+    container_name: terminalku
+    restart: unless-stopped
+    # Jalankan sebagai user host (PUID/PGID dari .env) agar bisa tulis volume data
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "8364:3000"
+    env_file: .env
+    environment:
+      # Container selalu listen di 3000 (host port 8364 → container 3000)
+      PORT: "3000"
+    volumes:
+      # Akses file VPS — home rw (untuk edit/simpan Fase 2), sisanya baca-saja
+      # Mount ke /home/adminsipuruh agar path absolut host (/home/adminsipuruh/...) bekerja persis sama
+      - /home/adminsipuruh:/home/adminsipuruh
+      - /home/adminsipuruh:/host/home
+      - /etc:/host/etc:ro
+      - /var/log:/host/var/log:ro
+      - ./data2:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

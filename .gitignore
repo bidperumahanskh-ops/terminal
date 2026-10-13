@@ -13,7 +13,6 @@ data2/
 # Dependensi & artefak
 node_modules/
 *.log
-*.bak-*
 
 # OS / editor
 .DS_Store
