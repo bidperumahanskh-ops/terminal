@@ -4,7 +4,7 @@
   const fmtSize = (n) => n >= 1e9 ? (n / 1e9).toFixed(1) + 'G' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : String(n);
   const fmtTime = (ms) => ms ? new Date(ms).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-  let state = { user: null, cwd: '/', fsRoot: '', items: [], selPath: null, clipboard: null, editor: null, tabs: [], activeTab: null, term: null, ws: null };
+  let state = { user: null, cwd: '/', fsRoot: '', items: [], selPath: null, clipboard: null, editor: null, tabs: [], activeTab: null, term: null, ws: null, dirSizes: {}, sizeQueue: [], sizeActive: 0 };
 
   // ---------- API helper ----------
   async function api(path, opts = {}) {
@@ -122,6 +122,7 @@
       state.cwd = data.path;
       $('#current-path').textContent = data.path;
       renderList(data.items);
+      loadDiskUsage();
     } catch (ex) { alert(ex.message); }
   }
 
@@ -136,6 +137,73 @@
     return abs.startsWith(root + '/') ? abs.slice(root.length + 1) : abs;
   }
 
+  // ---------- Ukuran folder (lazy) ----------
+  // Ukuran direktori dihitung di server hanya saat baris terlihat — bukan di
+  // dalam /api/fs/list, agar membuka folder besar tidak memblokir daftar.
+  const SIZE_MAX_CONCURRENT = 3;
+
+  function fmtSizeFull(n) {
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + ' TB';
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + ' GB';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + ' MB';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + ' KB';
+    return n + ' B';
+  }
+
+  function fmtDirSize(rec) {
+    if (!rec) return '…';
+    const base = fmtSizeFull(rec.size);
+    return rec.truncated ? '≥ ' + base : base;
+  }
+
+  // Isi kolom ukuran untuk sebuah path; aman dipanggil sebelum/sesudah fetch.
+  function applyDirSize(pathKey, rec) {
+    for (const el of document.querySelectorAll('#file-list .dir-size')) {
+      const row = el.closest('.file-item');
+      if (!row || row.dataset.path !== pathKey) continue;
+      el.textContent = fmtDirSize(rec);
+      el.classList.toggle('partial', !!rec?.truncated);
+      const it = (state.items || []).find((x) => `${state.cwd}/${x.name}` === pathKey);
+      if (it) {
+        const detail = rec
+          ? `${fmtDirSize(rec)} · ${rec.files} berkas${rec.truncated ? ` (dipindai sebagian: ${rec.reason})` : ''}`
+          : '';
+        row.title = `${it.name}\ndirektori${detail ? ' · ' + detail : ''}`;
+      }
+    }
+  }
+
+  function pumpSizeQueue() {
+    while (state.sizeActive < SIZE_MAX_CONCURRENT && state.sizeQueue.length) {
+      const job = state.sizeQueue.shift();
+      state.sizeActive++;
+      api(`/api/fs/size?path=${encodeURIComponent(job.path)}`)
+        .then((r) => { state.dirSizes[job.path] = r; applyDirSize(job.path, r); })
+        .catch(() => { state.dirSizes[job.path] = { size: 0, files: 0, dirs: 0, truncated: true, reason: 'gagal dibaca' }; applyDirSize(job.path, state.dirSizes[job.path]); })
+        .finally(() => { state.sizeActive--; pumpSizeQueue(); });
+    }
+  }
+
+  function queueDirSize(pathKey) {
+    const cached = state.dirSizes[pathKey];
+    if (cached) { applyDirSize(pathKey, cached); return; }
+    if (state.sizeQueue.some((j) => j.path === pathKey)) return;
+    state.sizeQueue.push({ path: pathKey });
+    pumpSizeQueue();
+  }
+
+  // Indikator kapasitas disk tempat FS_ROOT berada.
+  async function loadDiskUsage() {
+    const el = $('#disk-usage');
+    if (!el) return;
+    try {
+      const u = await api('/api/fs/usage');
+      el.textContent = `💾 ${fmtSizeFull(u.used)} / ${fmtSizeFull(u.total)} (${u.percent}%)`;
+      el.title = `Terpakai ${fmtSizeFull(u.used)} dari ${fmtSizeFull(u.total)}\nSisa ${fmtSizeFull(u.free)}\n${u.path}`;
+      el.classList.toggle('warn', u.percent >= 85);
+    } catch { el.textContent = ''; }
+  }
+
   function renderList(items) {
     state.items = items;
     const list = $('#file-list');
@@ -148,7 +216,7 @@
       div.innerHTML = `
         <span class="icon">${it.type === 'dir' ? '📁' : '📄'}</span>
         <span class="name"></span>
-        <span class="meta">${it.type === 'dir' ? '' : fmtSize(it.size)}</span>
+        <span class="meta${it.type === 'dir' ? ' dir-size' : ''}">${it.type === 'dir' ? '…' : fmtSize(it.size)}</span>
       `;
       div.querySelector('.name').textContent = it.name;
       div.title = `${it.name}\n${it.type === 'dir' ? 'direktori' : fmtSize(it.size) + ' · ' + fmtTime(it.mtime)}`;
@@ -167,6 +235,8 @@
         openCtxMenu(e.clientX, e.clientY, it);
       });
       list.appendChild(div);
+      // Ukuran folder dihitung menyusul (lazy), tidak menahan tampilnya daftar.
+      if (it.type === 'dir') queueDirSize(div.dataset.path);
     }
   }
 
@@ -720,7 +790,7 @@
       });
       tab.savedContent = content;
       renderTabs();
-      alert(data.backup ? `Tersimpan. Backup: ${data.backup.split('/').pop()}` : 'Tersimpan.');
+      alert('Tersimpan.');
       loadDir(state.cwd);
     } catch (ex) { alert(ex.message); }
   }
@@ -969,6 +1039,18 @@
     });
     state.term = term;
     term.open($('#terminal'));
+
+    // Keterangan direktori kerja shell, diambil dari judul terminal (OSC 0/2:
+    // bash menulis "user@host: <cwd>"; \w relatif terhadap HOME).
+    term.onTitleChange((title) => {
+      const m = /^[^:@\s]+@[^:]*:\s*(.*)$/.exec(title || '');
+      const raw = m ? m[1].trim() : '';
+      // \w pada PS1 relatif terhadap HOME → jadikan absolut agar jelas.
+      const dir = raw.startsWith('~') ? `/home/adminsipuruh${raw.slice(1)}` : raw;
+      const el = $('#term-cwd');
+      el.textContent = dir || '\u00a0';
+      el.title = dir ? `Direktori kerja: ${dir}` : 'Direktori kerja shell';
+    });
 
     // Dukungan mouse wheel scroll langsung ke terminal
     $('#terminal').addEventListener('wheel', (e) => {

@@ -27,8 +27,10 @@ export const config = {
   loginMaxFail: envInt('LOGIN_MAX_FAIL', 5),
   loginLockMin: envInt('LOGIN_LOCK_MIN', 15),
   fsRoot: env('FS_ROOT', ''), // '' = seluruh filesystem
-  fsBlock: env('FS_BLOCK', '/root,.ssh,.env,id_rsa,id_ed25519,node_modules,.git')
-    .split(',').map(s => s.trim()).filter(Boolean),
+  // TIDAK ADA blokir path (keputusan admin: file manager boleh membuka semua berkas di bawah
+  // FS_ROOT). Tidak memakai env sama sekali — jangan tambah kunci di .env untuk ini.
+  // `isBlocked()` di fs-safe.js tetap ada sebagai kait, tetapi selalu false selama daftar kosong.
+  fsBlock: [],
   termShell: env('TERM_SHELL', '/bin/bash'),
   termUser: env('TERM_USER', 'node'),
   termCwd: env('TERM_CWD', '/home/node'),

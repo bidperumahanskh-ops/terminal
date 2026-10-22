@@ -4,6 +4,7 @@ import path from 'node:path';
 import { checkPath } from './fs-safe.js';
 import { audit } from './auth.js';
 import { config } from './config.js';
+import { dirSize, diskUsage } from './fs-size.js';
 
 const MAX_READ = 2 * 1024 * 1024; // 2 MB batas baca file
 const MAX_UPLOAD = 50 * 1024 * 1024; // 50 MB batas upload
@@ -11,12 +12,8 @@ const MAX_UPLOAD = 50 * 1024 * 1024; // 50 MB batas upload
 // Role yang boleh tulis (admin). Viewer hanya baca.
 const canWrite = (user) => user.role === 'admin';
 
-// Backup file sebelum ditimpa: <file>.bak-<timestamp>
-async function backupFile(abs) {
-  const bak = `${abs}.bak-${Date.now()}`;
-  await fs.copyFile(abs, bak);
-  return bak;
-}
+// Backup file sebelum ditimpa: DIHAPUS (keputusan admin) — Simpan menimpa langsung,
+// tidak meninggalkan `<file>.bak-<timestamp>` di folder kerja.
 
 async function exists(p) {
   try { await fs.access(p); return true; } catch { return false; }
@@ -73,6 +70,37 @@ export function fsRoutes(app) {
     return { ok: true, path: abs, items };
   });
 
+  // Ukuran rekursif satu folder (dipanggil lazy oleh UI, bukan saat listing).
+  app.get('/api/fs/size', async (req, reply) => {
+    const p = req.query.path ?? '';
+    const { ok, abs, reason } = checkPath(p);
+    if (!ok) return reply.code(403).send({ error: reason });
+
+    let stat;
+    try { stat = await fs.stat(abs); }
+    catch (e) { return reply.code(400).send({ error: `tidak ditemukan: ${e.code ?? e.message}` }); }
+    if (!stat.isDirectory()) return reply.code(400).send({ error: 'bukan direktori' });
+
+    try {
+      const r = await dirSize(abs);
+      audit(req.user.id, 'fs.size', abs, req.ip);
+      return { ok: true, path: abs, ...r };
+    } catch (e) {
+      return reply.code(500).send({ error: `gagal menghitung ukuran: ${e.message}` });
+    }
+  });
+
+  // Kapasitas disk tempat FS_ROOT berada (untuk indikator pemakaian).
+  app.get('/api/fs/usage', async (req, reply) => {
+    const base = config.fsRoot || '/host';
+    try {
+      const u = await diskUsage(base);
+      return { ok: true, path: base, ...u };
+    } catch (e) {
+      return reply.code(500).send({ error: `gagal membaca kapasitas: ${e.message}` });
+    }
+  });
+
   app.get('/api/fs/read', async (req, reply) => {
     const p = req.query.path ?? '';
     const { ok, abs, reason } = checkPath(p);
@@ -102,17 +130,14 @@ export function fsRoutes(app) {
     try { stat = await fs.stat(abs); } catch { /* file baru */ }
     if (stat?.isDirectory()) return reply.code(400).send({ error: 'ini direktori' });
 
-    let backup = null;
-    if (stat) {
-      try { backup = await backupFile(abs); } catch { /* backup gagal, lanjut */ }
-    }
+    // Tidak ada backup berkas (keputusan admin): simpan langsung menimpa.
     try {
       await fs.writeFile(abs, content, 'utf8');
     } catch (e) {
       return reply.code(400).send({ error: `tidak bisa menulis: ${e.code ?? e.message}` });
     }
     audit(req.user.id, 'fs.write', abs, req.ip);
-    return { ok: true, path: abs, backup };
+    return { ok: true, path: abs };
   });
 
   // ---- Upload (admin) ----
